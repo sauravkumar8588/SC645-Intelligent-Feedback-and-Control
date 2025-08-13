@@ -1,0 +1,60 @@
+%{
+Two parameter approximate models can be used to approximate this transfer function 
+as taught in the lecture:
+1) Gain average resident time :
+   G1 = K / (1+s*Tar)         --parameters: K, Tar
+2) Integrator with time delay :
+   G2 = -a * exp(-sL) / s*L    --parameters: a, L
+%}
+
+
+% system model 1:
+
+s = tf('s');                                  % creating trasfer function variable s
+G_original = 1 / (s+1)^4;                     % defining actual trasfer function
+[out1, time1] = step(G_original, 25);         % step response of original trasfer function till 25 sec
+unitstep1 = ones(size(out1));                 % creating unit step of only ones and size same as out1    
+delta_t = time1(2) - time1(1);                % taking time difference to spply further in integration
+K = out1(end);                                % final value of output must be equal to k 
+A_0 = sum((out1(end) - out1) * delta_t);      % getting the integral like specified in the lecture 
+Tar = A_0 / K;                                % getting average resident time by the given formula in the lecture
+G_new_1 = K / (1+ s*Tar);                     % new trasfer function
+[out2, time2] = step(G_new_1, 25);            % step response of new TF
+X = sprintf('K = %f | Tar = %f',K, Tar);      %creating string X with parameters calculated
+disp(['System model 1 parameters --> ', X])   %displaying in command window
+
+
+
+
+% System model 2:
+
+grad_out1 = gradient(out1);                      % gradient of step response of original transfer function                   
+[max_changeinout1, index] = max(grad_out1);      % finding maximum value of gradient and out1 value at which it occur
+maximum_slope = max_changeinout1 / delta_t;      % finding maximum slope as divinding by delta_t
+max_slope_time_stamp = index * delta_t;          % getting time stamp of maximum slope
+max_slope_out1_coordinate = out1(index);         % We now have the line in the form of point and slope. 
+a = max_slope_y_coordinate - maximum_slope * max_slope_time_stamp; % getting the value of parameter a
+L = -a / maximum_slope;                           % parameter L ( USING NEAGITVE VALUE FOR CAUSALITY)
+G_new_2=(-a*exp(-L*s))/(L*s);                     % new transfer function
+[out3,time3]= step(G_new_2, 15);                  %step response of second model
+X = sprintf('a = %f | L = %f',a, L);              % printing as string 
+disp(['system Model 2 parameters --> ', X])       % display
+
+% plot(time1, out1)
+% hold on
+% plot(time2, out2)
+% hold on
+% plot(time3, out3)
+% hold off
+
+% bode plots of all models
+bode(G_original)                                
+hold on
+bode(G_new_1)
+hold on
+bode(G_new_2)
+hold off
+
+title('Step Response in one plot');             
+legend('original tf', 'system model1', 'system model2');
+saveas(gcf, 'comparisonplot.png');              % Saving comparison plot
